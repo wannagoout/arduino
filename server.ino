@@ -30,10 +30,7 @@ int httpPort = 80;
 int timezone = 3;
 int dst = 0;
 unsigned long previousMillis = 0;
-const long interval = 20000;
-
-///* timeCheck */
-//bool timeCheck = false;
+long interval = 20000;
 
 bool ConnectSetup(void) {
   pinMode(led, OUTPUT);
@@ -73,25 +70,30 @@ void SendDataToServer(double gpsValue[]) {
   root["xLocationInfo"]  = gpsValue[0];
   root["yLocationInfo"] = gpsValue[1];
 
-  /* 미세먼지 수치 제디대로 안들어오면 3번까지 체크 */
+  /* 미세먼지 수치 제대로 안들어오면 5번까지 체크 */
   int dustCnt = 0;
-  while (dustCnt++ < 3) {
+  while (dustCnt++ < 5) {
     root["dust"] = ReadDust();
     if (root["dust"] >= 0) {
       break;
     }
   }
-  if (root["dust"] == -1)
+  /* 미세먼지 수치 제대로 측정 안되면 interval 10초로 줘서 다시 측정할 수 있게 함. 성공하면 1분으로 설정해서 분 당 한번만 전송하게 함 */
+  if (root["dust"] == -1){
+    interval = 10000;
     return;
+  }
+  else{
+    interval = 60000;
+  }
   root.printTo(jsonData);
-  Serial.println(jsonData);
-  //SendHttp(jsonData);
-
+  //Serial.println(jsonData);
+  SendHttp(jsonData);
 }
 
 void SendHttp(String jsonData) {
   client.connect(server, httpPort);
-  Serial.println(client.connected());
+  //Serial.println(client.connected());
   if (client.connected()) {
     client.println("POST /wannaGoOut/api/dust/add HTTP/1.1");
     client.println("Host: 52.78.37.78");
@@ -106,10 +108,12 @@ void SendHttp(String jsonData) {
     client.connect(server, httpPort);
   }
   delay(1000);
+  String rcv = " ";
   while (client.connected() && client.available()) {
-    String rcv = client.readStringUntil('\r');
+    rcv = client.readStringUntil('\r');
     Serial.println(rcv);
   }
+  // rcv는 왜 success와 같지 않은가,,, 
 }
 
 bool CheckTime() {
@@ -127,8 +131,14 @@ bool CheckTime() {
     }
     Serial.print("currentMin : ");
     Serial.println(nowMinute);
-    if (nowMinute.toInt() % 2 == 0) {
+    Serial.print("interval : ");
+    Serial.println(interval);
+    /* 10분 마다 한번 씩 측정하게 함 */
+    if (nowMinute.toInt() % 10 == 0) {
       timeCheck = true;
+    }
+    else{
+      interval = 20000;
     }
   }
   return timeCheck;
