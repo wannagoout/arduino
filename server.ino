@@ -10,12 +10,6 @@
 #define STAPSK  "your-password"
 #endif
 
-//const char* ssid = "U+Net4B3C";
-//const char* password = "DD61044260";
-
-const char* ssid = "bomin의 iPhone";
-const char* password = "bomin0512";
-
 //const char* ssid = "TOMNTOMS SM";
 //const char* password = "sm9958828";
 
